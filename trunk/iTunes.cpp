@@ -18,12 +18,71 @@
 
 #include <string>
 #include <windows.h>
+#include <strsafe.h>
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "iTunesCOMInterface.h"
 
+using namespace std;
+
 static IiTunes *iITunes = 0;
+
+//////////////////////////////////////////////////////////////////////////////
+const static wchar_t *htmlfmt =
+L"<html><head><title>iTunesWeb Remote - iTunes %ls</title>\r\n"
+L"<style type=\"text/css\">\r\n"
+L"body{font-family:monospace;}\r\n"
+L"input{font-family:monospace;}\r\n"
+L"</style>\r\n"
+L"<script type=\"text/javascript\">\r\n"
+L"function lz(n) { return (n < 10) ? '0' + n : n; }\r\n"
+L"function newtime()\r\n"
+L"{\r\n"
+L"	var now = document.getElementById(\"now\").innerHTML;\r\n"
+L"	var total = document.getElementById(\"total\").innerHTML;\r\n"
+L"	var state = document.getElementById(\"state\").innerHTML;\r\n"
+L"	var tmp = new Array();\r\n"
+L"	tmp = now.split(':');\r\n"
+L"	var m = parseInt(tmp[0],10);\r\n"
+L"	var s = parseInt(tmp[1],10);\r\n"
+L"	tmp = total.split(':');\r\n"
+L"	var tm = parseInt(tmp[0],10);\r\n"
+L"	var ts = parseInt(tmp[1],10);\r\n"
+L"	if (++s > 59) { s = 0; m++; }\r\n"
+L"	document.getElementById(\"now\").innerHTML = lz(m) + ':' + lz(s);\r\n"
+L"	if (m >= tm && s > ts) window.location=\"i.html\";\r\n"
+L"	else if (state == 'Playing') setTimeout('newtime();', 1000);\r\n"
+L"}\r\n"
+L"</script>\r\n"
+L"</head>\r\n"
+L"<body onload=\"newtime();\">\r\n"
+L"<form action=\"i.html\" method=\"get\">\r\n"
+L"Track: <span id=\"track\">%ls</span><br />\r\n"
+L"Album: <span id=\"album\">%ls</span><br />\r\n"
+L"Artist: <span id=\"artist\">%ls</span><br />\r\n"
+L"Comment: <span id=\"comment\">%ls</span><br />\r\n"
+L"<span id=\"state\">%s</span><br />\r\n"
+L"<p>\r\n"
+L"<span id=\"now\">%02ld:%02ld</span>\r\n"
+L"<input type=\"submit\" name=\"prev\" value=\"|<<\" />\r\n"
+L"<input type=\"submit\" name=\"rew\" value=\"<<\" />\r\n"
+L"<input type=\"submit\" name=\"pause\" value=\"||\" />\r\n"
+L"<input type=\"submit\" name=\"play\" value=\">\" />\r\n"
+L"<input type=\"submit\" name=\"ffwd\" value=\">>\" />\r\n"
+L"<input type=\"submit\" name=\"next\" value=\">>|\" />\r\n"
+L"<span id=\"total\">%ls</span>\r\n"
+L"</p>\r\n"
+L"<p>Volume<br />\r\n"
+L"<input type=\"submit\" name=\"10up\" value=\"+10\" /><br />\r\n"
+L"<input type=\"submit\" name=\"up\" value=\"+\" /><br />\r\n"
+L"<input type=\"submit\" name=\"mute\" value=\"0\" /> %ld %% (%ls)<br />\r\n"
+L"<input type=\"submit\" name=\"down\" value=\"-\" /><br />\r\n"
+L"<input type=\"submit\" name=\"10down\" value=\"-10\" /><br />\r\n"
+L"</p>\r\n"
+L"</form></body></html>\r\n";
+
+static wchar_t htmlbuf[8192];	// storage for above after wsprintfW...
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -60,123 +119,130 @@ void init_iTunes(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::string get_iTunes(void)
+std::string get_iTunes(char *req, int reqlen)
 {
-  using std::string;
-  using std::wstring;
-
   IITTrack *iITrack = 0;
   ITPlayerState iIPlayerState;
-  //IITPlaylist iIPlaylist;
-  //IITTrackCollection iITrackCollection;
+  wstring track = L"", album = L"", url = L"", artist = L"";
+  wstring comment = L"", total = L"00:00", state, version = L"";
   BSTR bstr = 0;
-  long position;
-  wchar_t posbuf[64];
-
-  // String operations done in a wstring, then converted for return
-  wstring wstrRet;
+  long position, volume;
+  VARIANT_BOOL isMuted;
   string strRet;
 
+  req[reqlen] = 0;	// prevent walking into neverneverland
+  // handle any requests before updating state
+  if (strstr(req, "prev"))
+    iITunes->BackTrack();
+  if (strstr(req, "next"))
+    iITunes->NextTrack();
+  if (strstr(req, "ffwd")) {
+    iITunes->get_PlayerState(&iIPlayerState);
+    if (iIPlayerState == ITPlayerStatePlaying)
+      iITunes->FastForward();
+    else
+      iITunes->Resume();
+  }
+  if (strstr(req, "rew")) {
+    iITunes->get_PlayerState(&iIPlayerState);
+    if (iIPlayerState == ITPlayerStatePlaying)
+      iITunes->Rewind();
+    else
+      iITunes->Resume();
+  }
+  if (strstr(req, "play"))
+    iITunes->Play();
+  if (strstr(req, "pause"))
+    iITunes->Pause();
+  if (strstr(req, "10up")) {
+    iITunes->get_SoundVolume(&volume);
+    iITunes->put_SoundVolume(volume + 10);
+  } else if (strstr(req, "up")) {
+    iITunes->get_SoundVolume(&volume);
+    iITunes->put_SoundVolume(volume + 1);
+  }
+  if (strstr(req, "10down")) {
+    iITunes->get_SoundVolume(&volume);
+    if (volume < 10)
+      volume = 10;
+    iITunes->put_SoundVolume(volume - 10);
+  } else if (strstr(req, "down")) {
+    iITunes->get_SoundVolume(&volume);
+    if (volume < 1)
+      volume = 1;
+    iITunes->put_SoundVolume(volume - 1);
+  }
+  if (strstr(req, "mute")) {
+    iITunes->get_Mute(&isMuted);
+    iITunes->put_Mute(!isMuted);
+  }
+
+  // update state, may be affected by above requests...
+  iITunes->get_CurrentTrack(&iITrack);
   iITunes->get_CurrentTrack(&iITrack);
   iITunes->get_PlayerState(&iIPlayerState);
-#if 0
-  iITunes->get_CurrentPlaylist(&iIPlaylist);
-
-  if (iIPlaylist) {
-    iIPlaylist->get_Time((BSTR *) & bstr);
-    if (bstr) {
-      wstrRet += L"Playlist Time: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
-  }
-  bstr = 0;
-#endif
-  iITunes->get_CurrentStreamURL((BSTR *) & bstr);
-  if (bstr) {
-    wstrRet += L"URL: ";
-    wstrRet += bstr;
-    wstrRet += L"\r\n";
-  }
-
   iITunes->get_PlayerPosition(&position);
-  wsprintfW(posbuf, L"%02d:%02d", position / 60, position % 60);
-  wstrRet += L"Position: ";
-  wstrRet += posbuf;
-  wstrRet += L"\r\n";
+  iITunes->get_SoundVolume(&volume);
+  iITunes->get_Mute(&isMuted);
+  iITunes->get_Version((BSTR *)&bstr);
+  if (bstr)
+    version = bstr;
 
   if (iITrack) {
     bstr = 0;
-    iITrack->get_Name((BSTR *) & bstr);
-    // Add song title
-    if (bstr) {
-      wstrRet += L"Track: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
+    iITrack->get_Name((BSTR *)&bstr);
+    if (bstr)
+      track = bstr;
     bstr = 0;
-    iITrack->get_Album((BSTR *) & bstr);
-    if (bstr) {
-      wstrRet += L"Album: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
+    iITrack->get_Album((BSTR *)&bstr);
+    if (bstr)
+      album = bstr;
     bstr = 0;
-    iITrack->get_Artist((BSTR *) & bstr);
-    if (bstr) {
-      wstrRet += L"Artist: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
+    iITrack->get_Artist((BSTR *)&bstr);
+    if (bstr)
+      artist = bstr;
     bstr = 0;
-    iITrack->get_Comment((BSTR *) & bstr);
-    if (bstr) {
-      wstrRet += L"Comment: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
+    iITrack->get_Comment((BSTR *)&bstr);
+    if (bstr)
+      comment = bstr;
     bstr = 0;
-    iITrack->get_Time((BSTR *) & bstr);
-    if (bstr) {
-      wstrRet += L"Time: ";
-      wstrRet += bstr;
-      wstrRet += L"\r\n";
-    }
-  } else {
-    // Couldn't get track name
+    iITrack->get_Time((BSTR *)&bstr);
+    if (bstr)
+      total = bstr;
   }
 
-
-  wstrRet += L"State: ";
-  // Add player state
   switch (iIPlayerState) {
   case ITPlayerStatePlaying:
-    wstrRet += L"Playing";
+    state = L"Playing";
     break;
   case ITPlayerStateStopped:
-    wstrRet += L"Stopped";
+    state = L"Stopped";
     break;
   case ITPlayerStateFastForward:
-    wstrRet += L"FastForward";
+    state = L"FastForward";
     break;
   case ITPlayerStateRewind:
-    wstrRet += L"Rewind";
+    state = L"Rewind";
     break;
   default:
+    state = L"Unknown";
     break;
   }
-  wstrRet += L"\r\n";
-
   if (iITrack)
     iITrack->Release();
 
-  // Convert the result from wstring to utf-8 string
-  size_t len = wstrRet.length();
-  // max 1024 bytes in return message...
-  char convbuf[1024];
-  memset(convbuf, 0, 1024);
-  WideCharToMultiByte(CP_UTF8, 0, wstrRet.c_str(), len,
-		      convbuf, 1024, NULL, NULL);
+  // Convert the result from wchar_t to utf-8 string
+  StringCbPrintfW(htmlbuf, 8191, htmlfmt, version.c_str(), track.c_str(),
+		  album.c_str(), artist.c_str(), comment.c_str(),
+		  state.c_str(), position / 60, position % 60,
+		  total.c_str(), volume, isMuted ? L"Muted" :
+		  L"Unmuted");
+  size_t len = wcslen(htmlbuf);
+  // max 8192 bytes in return message...
+  char convbuf[8192];
+  memset(convbuf, 0, 8192);
+  WideCharToMultiByte(CP_UTF8, 0, htmlbuf, len,
+		      convbuf, 8191, NULL, NULL);
   strRet = convbuf;
   return strRet;
 }

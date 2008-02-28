@@ -30,7 +30,7 @@ using namespace std;
 
 extern void init_iTunes(void);
 extern void kill_iTunes(void);
-extern string get_iTunes(void);
+extern string get_iTunes(char *req, int reqlen);
 
 //////////////////////////////////////////////////////////////////////////////
 // maximum possible length of incoming network packet
@@ -54,7 +54,6 @@ void RemoveConnect(int s)
   shutdown(sockfd[s], 2);
   closesocket(sockfd[s]);
   i = (--sockfdmax) - s;
-  cerr << "Closed from " << inet_ntoa(fromhost[s]) << endl;
   if (!i)
     return;			// no need to collapse list if at end
   memcpy(&sockfd[s], &sockfd[s + 1], i * sizeof(*sockfd));
@@ -73,7 +72,6 @@ SOCKET AcceptConnect(void)
   s = accept(sockfd[0], (struct sockaddr *) &sa, &u);
   memcpy(&fromhost[sockfdmax], (struct in_addr *) &sa.sin_addr,
 	 sizeof(*fromhost));
-  cerr << "Connect from " << inet_ntoa(fromhost[sockfdmax]) << endl;
   //fcntl(s, F_SETFL, O_NDELAY);
   return s;
 
@@ -87,7 +85,6 @@ int ReadInput(int s)
   if (netlen <= 0) {
     netlen = 0;
   }
-  cerr << "Request from " << inet_ntoa(fromhost[s]) << endl;
   return netlen;
 }
 
@@ -128,8 +125,6 @@ int main()
   init_server();
   init_iTunes();
 
-  itd = get_iTunes();
-  cerr << itd << endl;
   while (ok) {
     FD_ZERO(&readfs);
     for (i = 0; i < sockfdmax; i++) {
@@ -149,7 +144,10 @@ int main()
 	    }
 	  } else {
 	    char buf[32];
-	    itd = get_iTunes();
+	    if (!ReadInput(i)) {
+	      RemoveConnect(i);
+	    }
+	    itd = get_iTunes(netbuf, netlen);
 	    sprintf(buf, "%d", itd.length());
 	    _time64(&ltime);
 	    pkt = "HTTP/1.1 200 OK\r\nDate: ";
@@ -160,12 +158,9 @@ int main()
 	    pkt += "Content-Length: ";
 	    pkt += buf;
 	    pkt += "\r\nConnection: close\r\n";
-	    pkt += "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
+	    pkt += "Content-Type: text/html; charset=UTF-8\r\n\r\n";
 	    pkt += itd;
 	    send(sockfd[i], pkt.c_str(), pkt.length(), 0);
-	    if (!ReadInput(i)) {
-	      RemoveConnect(i);
-	    }
 	  }
 	}
       }
