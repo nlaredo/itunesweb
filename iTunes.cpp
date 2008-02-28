@@ -29,156 +29,156 @@ static IiTunes *iITunes = 0;
 
 void kill_iTunes(void)
 {
-	if(iITunes)
-		iITunes->Release();
-	iITunes = 0;
-	CoUninitialize();
+  if (iITunes)
+    iITunes->Release();
+  iITunes = 0;
+  CoUninitialize();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void init_iTunes(void)
 {
-	HRESULT hRes;
+  HRESULT hRes;
 
-	if (iITunes)
-		return;		// already initialized
+  if (iITunes)
+    return;			// already initialized
 
-	hRes = CoInitialize(0);
-	if (hRes != S_OK) {
-		exit(1);
-	}
-	hRes = ::CoCreateInstance(CLSID_iTunesApp, NULL, CLSCTX_LOCAL_SERVER, IID_IiTunes, (PVOID *)&iITunes);
-	if (hRes == S_OK && iITunes) {
-		// iTunes interface created successfully...
-	} else {
-		kill_iTunes();
-		exit(1);
-	}
+  hRes = CoInitialize(0);
+  if (hRes != S_OK) {
+    exit(1);
+  }
+  hRes =::CoCreateInstance(CLSID_iTunesApp, NULL, CLSCTX_LOCAL_SERVER,
+			   IID_IiTunes, (PVOID *) & iITunes);
+  if (hRes == S_OK && iITunes) {
+    // iTunes interface created successfully...
+  } else {
+    kill_iTunes();
+    exit(1);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 std::string get_iTunes(void)
 {
-	using std::string;
-	using std::wstring;
+  using std::string;
+  using std::wstring;
 
-	IITTrack *iITrack = 0;
-	ITPlayerState iIPlayerState;
-	//IITPlaylist iIPlaylist;
-	//IITTrackCollection iITrackCollection;
-	BSTR bstr = 0;
-	long position;
-	wchar_t posbuf[64];
+  IITTrack *iITrack = 0;
+  ITPlayerState iIPlayerState;
+  //IITPlaylist iIPlaylist;
+  //IITTrackCollection iITrackCollection;
+  BSTR bstr = 0;
+  long position;
+  wchar_t posbuf[64];
 
-	// String operations done in a wstring, then converted for return
-	wstring wstrRet;
-	string strRet;
+  // String operations done in a wstring, then converted for return
+  wstring wstrRet;
+  string strRet;
 
-	iITunes->get_CurrentTrack(&iITrack);
-	iITunes->get_PlayerState(&iIPlayerState);
+  iITunes->get_CurrentTrack(&iITrack);
+  iITunes->get_PlayerState(&iIPlayerState);
 #if 0
-	iITunes->get_CurrentPlaylist(&iIPlaylist);
+  iITunes->get_CurrentPlaylist(&iIPlaylist);
 
-	if (iIPlaylist) {
-		iIPlaylist->get_Time((BSTR *)&bstr);
-		if (bstr) {
-			wstrRet += L"Playlist Time: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-	}
-	bstr = 0;
+  if (iIPlaylist) {
+    iIPlaylist->get_Time((BSTR *) & bstr);
+    if (bstr) {
+      wstrRet += L"Playlist Time: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+  }
+  bstr = 0;
 #endif
-	iITunes->get_CurrentStreamURL((BSTR *)&bstr);
-	if (bstr) {
-		wstrRet += L"URL: ";
-		wstrRet += bstr;
-		wstrRet += L"\r\n";
-	}
+  iITunes->get_CurrentStreamURL((BSTR *) & bstr);
+  if (bstr) {
+    wstrRet += L"URL: ";
+    wstrRet += bstr;
+    wstrRet += L"\r\n";
+  }
 
-	iITunes->get_PlayerPosition(&position);
-	wsprintfW(posbuf, L"%02d:%02d", position / 60, position % 60);
-	wstrRet += L"Position: ";
-	wstrRet += posbuf;
-	wstrRet += L"\r\n";
+  iITunes->get_PlayerPosition(&position);
+  wsprintfW(posbuf, L"%02d:%02d", position / 60, position % 60);
+  wstrRet += L"Position: ";
+  wstrRet += posbuf;
+  wstrRet += L"\r\n";
 
-	if(iITrack) {
-		bstr = 0;
-		iITrack->get_Name((BSTR *)&bstr);
-		// Add song title
-		if(bstr) {
-			wstrRet += L"Track: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-		bstr = 0;
-		iITrack->get_Album((BSTR *)&bstr);
-		if (bstr) {
-			wstrRet += L"Album: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-		bstr = 0;
-		iITrack->get_Artist((BSTR *)&bstr);
-		if (bstr) {
-			wstrRet += L"Artist: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-		bstr = 0;
-		iITrack->get_Comment((BSTR *)&bstr);
-		if (bstr) {
-			wstrRet += L"Comment: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-		bstr = 0;
-		iITrack->get_Time((BSTR *)&bstr);
-		if (bstr) {
-			wstrRet += L"Time: ";
-			wstrRet += bstr;
-			wstrRet += L"\r\n";
-		}
-	} else {
-		// Couldn't get track name
-	}
+  if (iITrack) {
+    bstr = 0;
+    iITrack->get_Name((BSTR *) & bstr);
+    // Add song title
+    if (bstr) {
+      wstrRet += L"Track: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+    bstr = 0;
+    iITrack->get_Album((BSTR *) & bstr);
+    if (bstr) {
+      wstrRet += L"Album: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+    bstr = 0;
+    iITrack->get_Artist((BSTR *) & bstr);
+    if (bstr) {
+      wstrRet += L"Artist: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+    bstr = 0;
+    iITrack->get_Comment((BSTR *) & bstr);
+    if (bstr) {
+      wstrRet += L"Comment: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+    bstr = 0;
+    iITrack->get_Time((BSTR *) & bstr);
+    if (bstr) {
+      wstrRet += L"Time: ";
+      wstrRet += bstr;
+      wstrRet += L"\r\n";
+    }
+  } else {
+    // Couldn't get track name
+  }
 
 
-	wstrRet += L"State: ";
-	// Add player state
-	switch(iIPlayerState)
-	{
-		case ITPlayerStatePlaying:
-			wstrRet += L"Playing";
-			break;
-		case ITPlayerStateStopped:
-			wstrRet += L"Stopped";
-			break;
-		case ITPlayerStateFastForward:
-			wstrRet += L"FastForward";
-			break;
-		case ITPlayerStateRewind:
-			wstrRet += L"Rewind";
-			break;
-		default:
-			break;
-	}
-	wstrRet += L"\r\n";
+  wstrRet += L"State: ";
+  // Add player state
+  switch (iIPlayerState) {
+  case ITPlayerStatePlaying:
+    wstrRet += L"Playing";
+    break;
+  case ITPlayerStateStopped:
+    wstrRet += L"Stopped";
+    break;
+  case ITPlayerStateFastForward:
+    wstrRet += L"FastForward";
+    break;
+  case ITPlayerStateRewind:
+    wstrRet += L"Rewind";
+    break;
+  default:
+    break;
+  }
+  wstrRet += L"\r\n";
 
-	if(iITrack)
-		iITrack->Release();
+  if (iITrack)
+    iITrack->Release();
 
-	// Convert the result from wstring to utf-8 string
-	size_t len = wstrRet.length();
-	// max 1024 bytes in return message...
-	char convbuf[1024];
-	memset(convbuf, 0, 1024);
-	WideCharToMultiByte(CP_UTF8, 0, wstrRet.c_str(), len,
-		convbuf, 1024, NULL, NULL);
-	strRet = convbuf;
-	return strRet;
+  // Convert the result from wstring to utf-8 string
+  size_t len = wstrRet.length();
+  // max 1024 bytes in return message...
+  char convbuf[1024];
+  memset(convbuf, 0, 1024);
+  WideCharToMultiByte(CP_UTF8, 0, wstrRet.c_str(), len,
+		      convbuf, 1024, NULL, NULL);
+  strRet = convbuf;
+  return strRet;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -49,33 +49,33 @@ static fd_set readfs;
 // s = index of socket to remove
 void RemoveConnect(int s)
 {
-    int i;
+  int i;
 
-    shutdown(sockfd[s], 2);
-    closesocket(sockfd[s]);
-    i = (--sockfdmax) - s;
-    cerr << "Closed from " << inet_ntoa(fromhost[s]) << endl;
-    if (!i)	/* no need to collapse list if at end */
-	return;
-    memcpy(&sockfd[s], &sockfd[s + 1], i * sizeof(*sockfd));
-    memcpy(&fromhost[s], &fromhost[s + 1], i * sizeof(*fromhost));
+  shutdown(sockfd[s], 2);
+  closesocket(sockfd[s]);
+  i = (--sockfdmax) - s;
+  cerr << "Closed from " << inet_ntoa(fromhost[s]) << endl;
+  if (!i)
+    return;			// no need to collapse list if at end
+  memcpy(&sockfd[s], &sockfd[s + 1], i * sizeof(*sockfd));
+  memcpy(&fromhost[s], &fromhost[s + 1], i * sizeof(*fromhost));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // accept a new connection, indicated by positive select on listen socket
 SOCKET AcceptConnect(void)
 {
-    struct sockaddr_in sa;
-    int u = sizeof(sa);
-    SOCKET s;
+  struct sockaddr_in sa;
+  int u = sizeof(sa);
+  SOCKET s;
 
-    memset(&sa, 0, u);
-    s = accept(sockfd[0], (struct sockaddr *) &sa, &u);
-    memcpy(&fromhost[sockfdmax], (struct in_addr *) &sa.sin_addr,
-	  sizeof(*fromhost));
-    cerr << "Connect from " << inet_ntoa(fromhost[sockfdmax]) << endl;
-    //fcntl(s, F_SETFL, O_NDELAY);
-    return s;
+  memset(&sa, 0, u);
+  s = accept(sockfd[0], (struct sockaddr *) &sa, &u);
+  memcpy(&fromhost[sockfdmax], (struct in_addr *) &sa.sin_addr,
+	 sizeof(*fromhost));
+  cerr << "Connect from " << inet_ntoa(fromhost[sockfdmax]) << endl;
+  //fcntl(s, F_SETFL, O_NDELAY);
+  return s;
 
 }
 
@@ -83,102 +83,101 @@ SOCKET AcceptConnect(void)
 // read in the largest chunks available, zero length read or error = return 0
 int ReadInput(int s)
 {
-	netlen = recvfrom(sockfd[s], netbuf, MAXNETB, 0, NULL, NULL);
-	if (netlen <= 0) {
-		netlen = 0;
-	}
-	cerr << "Request from " << inet_ntoa(fromhost[s]) << endl;
-	return netlen;
+  netlen = recvfrom(sockfd[s], netbuf, MAXNETB, 0, NULL, NULL);
+  if (netlen <= 0) {
+    netlen = 0;
+  }
+  cerr << "Request from " << inet_ntoa(fromhost[s]) << endl;
+  return netlen;
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
 void init_server(void)
 {
-	WSADATA wsaData;
-	sockaddr_in sa;
-	int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+  WSADATA wsaData;
+  sockaddr_in sa;
+  int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-	sockfd[0] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sockfd[0] == INVALID_SOCKET) {
-		WSACleanup();
-		exit(1);
-	}
-	memset(&sa, 0, sizeof(sa));
-	sa.sin_family = PF_INET;
-	sa.sin_port = htons(HTTP_PORT);
-	sa.sin_addr.s_addr = htonl(INADDR_ANY);
-	if (bind(sockfd[0], (SOCKADDR *)&sa, sizeof(sa)) == SOCKET_ERROR) {
-		closesocket(sockfd[0]);
-		WSACleanup();
-		exit(1);
-	}
-	listen(sockfd[0], SOMAXCONN);
-	sockfdmax++;
+  sockfd[0] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (sockfd[0] == INVALID_SOCKET) {
+    WSACleanup();
+    exit(1);
+  }
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = PF_INET;
+  sa.sin_port = htons(HTTP_PORT);
+  sa.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(sockfd[0], (SOCKADDR *) & sa, sizeof(sa)) == SOCKET_ERROR) {
+    closesocket(sockfd[0]);
+    WSACleanup();
+    exit(1);
+  }
+  listen(sockfd[0], SOMAXCONN);
+  sockfdmax++;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 int main()
 {
-	int i, ok = 1;
-	string itd, pkt;
-	__time64_t ltime;
+  int i, ok = 1;
+  string itd, pkt;
+  __time64_t ltime;
 
-	init_server();
-	init_iTunes();
-	
-	itd = get_iTunes();
-	cerr << itd << endl;
-	while (ok) {
-		FD_ZERO(&readfs);
-		for (i = 0; i < sockfdmax; i++) {
-			FD_SET(sockfd[i], &readfs);
-		}
-		if (select(FD_SETSIZE, &readfs, NULL, NULL, NULL) > 0) {
-			for (i = 0; i < sockfdmax; i++) {
-			    if (FD_ISSET(sockfd[i], &readfs)) {
-				if (i == 0) {
-				    sockfd[sockfdmax] = AcceptConnect();
-				    if (sockfdmax >= MAXCONN) {
-					send(sockfd[sockfdmax],
-						"503 Service Unavailable\r\n",
-						25, 0);
-					closesocket(sockfd[sockfdmax]);
-				    } else {
-					sockfdmax++;
-				    }
-				} else {
-					char buf[32];
-					itd = get_iTunes();
-					sprintf(buf, "%d", itd.length());
-					_time64(&ltime);
-					pkt = "HTTP/1.1 200 OK\r\nDate: ";
-					pkt += _ctime64(&ltime);
-					pkt += "Server: iTunesWeb/0.0.0 (Win32) (Windows XP)\r\n";
-					pkt += "Last-Modified: ";
-					pkt += _ctime64(&ltime);
-					pkt += "Content-Length: ";
-					pkt += buf;
-					pkt += "\r\nConnection: close\r\n";
-					pkt += "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
-					pkt += itd;
-					send(sockfd[i], pkt.c_str(),
-						pkt.length(), 0);
-					if (!ReadInput(i)) {
-						RemoveConnect(i);
-					}
-				}
-			    }
-			}
-		} else {
-			ok = 0;
-		}
+  init_server();
+  init_iTunes();
+
+  itd = get_iTunes();
+  cerr << itd << endl;
+  while (ok) {
+    FD_ZERO(&readfs);
+    for (i = 0; i < sockfdmax; i++) {
+      FD_SET(sockfd[i], &readfs);
+    }
+    if (select(FD_SETSIZE, &readfs, NULL, NULL, NULL) > 0) {
+      for (i = 0; i < sockfdmax; i++) {
+	if (FD_ISSET(sockfd[i], &readfs)) {
+	  if (i == 0) {
+	    sockfd[sockfdmax] = AcceptConnect();
+	    if (sockfdmax >= MAXCONN) {
+	      send(sockfd[sockfdmax],
+		   "503 Service Unavailable\r\n", 25, 0);
+	      closesocket(sockfd[sockfdmax]);
+	    } else {
+	      sockfdmax++;
+	    }
+	  } else {
+	    char buf[32];
+	    itd = get_iTunes();
+	    sprintf(buf, "%d", itd.length());
+	    _time64(&ltime);
+	    pkt = "HTTP/1.1 200 OK\r\nDate: ";
+	    pkt += _ctime64(&ltime);
+	    pkt += "Server: iTunesWeb/0.0.0 (Win32) (Windows XP)\r\n";
+	    pkt += "Last-Modified: ";
+	    pkt += _ctime64(&ltime);
+	    pkt += "Content-Length: ";
+	    pkt += buf;
+	    pkt += "\r\nConnection: close\r\n";
+	    pkt += "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
+	    pkt += itd;
+	    send(sockfd[i], pkt.c_str(), pkt.length(), 0);
+	    if (!ReadInput(i)) {
+	      RemoveConnect(i);
+	    }
+	  }
 	}
-	kill_iTunes();
-	shutdown(sockfd[0], 2);
-	closesocket(sockfd[0]);
-	WSACleanup();
-	return 0;
+      }
+    } else {
+      ok = 0;
+    }
+  }
+  kill_iTunes();
+  shutdown(sockfd[0], 2);
+  closesocket(sockfd[0]);
+  WSACleanup();
+  return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
