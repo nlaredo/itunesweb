@@ -189,6 +189,9 @@
 						PreprocessorDefinitions=""/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\iTunesWeb.rc">
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -196,10 +199,16 @@
 			<File
 				RelativePath="iTunesCOMInterface.h">
 			</File>
+			<File
+				RelativePath=".\resource.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+			<File
+				RelativePath=".\icon1.ico">
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
