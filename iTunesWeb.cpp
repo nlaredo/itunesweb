@@ -152,7 +152,7 @@ int main()
 	    _time64(&ltime);
 	    pkt = "HTTP/1.1 200 OK\r\nDate: ";
 	    pkt += _ctime64(&ltime);
-	    pkt += "Server: iTunesWeb/0.0.0 (Win32) (Windows XP)\r\n";
+	    pkt += "Server: iTunesWeb/1.0.0.1 (Win32) (Windows XP)\r\n";
 	    pkt += "Last-Modified: ";
 	    pkt += _ctime64(&ltime);
 	    pkt += "Content-Length: ";
