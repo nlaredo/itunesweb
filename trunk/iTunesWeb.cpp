@@ -16,7 +16,6 @@
 //  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //////////////////////////////////////////////////////////////////////////////
 
-#include <iostream>
 #include <string>
 #include <winsock2.h>
 #include <time.h>
@@ -33,14 +32,18 @@ extern void kill_iTunes(void);
 extern string get_iTunes(char *req, int reqlen);
 
 //////////////////////////////////////////////////////////////////////////////
-// maximum possible length of incoming network packet
-#define MAXNETB 8200
+// maximum interesting length of incoming network packet
+#define MAXNETB 2048
+// maximum length of an individual incoming request
+#define MAXREQB 8192
 // maximum number of connections to allow
 #define MAXCONN (FD_SETSIZE - 5)
 
 static char netbuf[MAXNETB];
 static struct in_addr fromhost[MAXCONN];
 static SOCKET sockfd[MAXCONN];
+static char *reqbuf[MAXCONN];
+static int reqlen[MAXCONN];
 static int netlen = 0, sockfdmax = 0;
 static fd_set readfs;
 
@@ -54,10 +57,18 @@ void RemoveConnect(int s)
   shutdown(sockfd[s], 2);
   closesocket(sockfd[s]);
   i = (--sockfdmax) - s;
+  // free request assembly buffer
+  if (reqbuf[s]) {
+    free(reqbuf[s]);
+    reqbuf[s] = NULL;
+  }
+  reqlen[s] = 0;
   if (!i)
     return;			// no need to collapse list if at end
-  memcpy(&sockfd[s], &sockfd[s + 1], i * sizeof(*sockfd));
-  memcpy(&fromhost[s], &fromhost[s + 1], i * sizeof(*fromhost));
+  memmove(&sockfd[s], &sockfd[s + 1], i * sizeof(*sockfd));
+  memmove(&fromhost[s], &fromhost[s + 1], i * sizeof(*fromhost));
+  memmove(&reqbuf[s], &reqbuf[s + 1], i * sizeof(*reqbuf));
+  memmove(&reqlen[s], &reqlen[s + 1], i * sizeof(*reqlen));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,7 +89,7 @@ SOCKET AcceptConnect(void)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// read in the largest chunks available, zero length read or error = return 0
+// read as much as is available, zero length read or error = return 0
 int ReadInput(int s)
 {
   netlen = recvfrom(sockfd[s], netbuf, MAXNETB, 0, NULL, NULL);
@@ -116,7 +127,8 @@ void init_server(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int main()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+		   LPSTR lpCmdLine, int nCmdShow)
 {
   int i, ok = 1;
   string itd, pkt;
@@ -135,29 +147,69 @@ int main()
 	if (FD_ISSET(sockfd[i], &readfs)) {
 	  if (i == 0) {
 	    sockfd[sockfdmax] = AcceptConnect();
-	    if (sockfdmax >= MAXCONN) {
+	    if (((reqbuf[sockfdmax] = (char *)malloc(MAXREQB)) == NULL) ||
+	        (sockfdmax >= MAXCONN)) {
+	      // out of memory or max connections reached
 	      send(sockfd[sockfdmax],
-		   "503 Service Unavailable\r\n", 25, 0);
+		   "HTTP/1.1 503 Service Unavailable\r\n", 34, 0);
 	      closesocket(sockfd[sockfdmax]);
 	    } else {
+	      reqlen[sockfdmax] = 0;	// no data yet receivd for connection
 	      sockfdmax++;
 	    }
 	  } else {
 	    char buf[32];
+	    int len;
 	    if (!ReadInput(i)) {
 	      RemoveConnect(i);
+	      break;	// setup readfs again, socket list is now changed...
 	    }
-	    itd = get_iTunes(netbuf, netlen);
+	    if (netlen + reqlen[i] >= MAXREQB) {
+	      // get to the point already, evil client?
+	      send(sockfd[i], "HTTP/1.1 400 Bad Request\r\n", 26, 0);
+	      RemoveConnect(i);
+	      break;	// setup readfs again, socket list is now changed...
+	    }
+	    // append packet to everything received so far...
+	    memcpy(&reqbuf[i][reqlen[i]], netbuf, netlen);
+	    reqlen[i] += netlen;
+	    reqbuf[i][reqlen[i]] = '\0';
+	    char *tmp = strstr(reqbuf[i], "\r\n\r\n"), savechar;
+	    if (!tmp)
+	      continue;	// wait for complete header with terminal blank line
+
+	    char *contentlen = strstr(reqbuf[i], "\nContent-Length:");
+	    if (contentlen) {
+	      size_t bodylen = atoi(contentlen + 16);
+	      if (strlen(tmp) - 4 < bodylen)
+		continue;	// wait for complete body
+	      savechar = tmp[4 + bodylen];
+	      tmp[4 + bodylen] = '\0';	// nul terminate body
+	    } else {
+	      savechar = tmp[4];
+	      tmp[4] = '\0';	// nul terminate request
+	    }
+	    len = strlen(reqbuf[i]);
+	    // send completed request to itunes handler
+	    itd = get_iTunes(reqbuf[i], len);
+	    // restore character overwritten with nul
+	    reqbuf[i][len] = savechar;
+	    // move following chars back to start of request buffer
+	    if (len < reqlen[i])
+	      memmove(reqbuf[i], &reqbuf[i][len], reqlen[i] - len);
+	    // setup accounting for future (keep-alive) request
+	    reqlen[i] = reqlen[i] - len;
+	    reqbuf[i][reqlen[i]] = '\0';
 	    sprintf(buf, "%d", itd.length());
 	    _time64(&ltime);
 	    pkt = "HTTP/1.1 200 OK\r\nDate: ";
 	    pkt += _ctime64(&ltime);
-	    pkt += "Server: iTunesWeb/1.0.0.1 (Win32) (Windows XP)\r\n";
+	    pkt += "Server: iTunesWeb/1.0.0.2 (Win32) (Windows XP)\r\n";
 	    pkt += "Last-Modified: ";
 	    pkt += _ctime64(&ltime);
 	    pkt += "Content-Length: ";
 	    pkt += buf;
-	    pkt += "\r\nConnection: close\r\n";
+	    pkt += "\r\nConnection: keep-alive\r\n";
 	    pkt += "Content-Type: text/html; charset=UTF-8\r\n\r\n";
 	    pkt += itd;
 	    send(sockfd[i], pkt.c_str(), pkt.length(), 0);
