@@ -32,8 +32,10 @@ static IiTunes *iITunes = 0;
 const static wchar_t *htmlfmt =
 L"<html><head><title>iTunesWeb Remote - iTunes %ls</title>\r\n"
 L"<style type=\"text/css\">\r\n"
-L"body{font-family:monospace;}\r\n"
 L"input{font-family:monospace;}\r\n"
+L"table{border:0;margin-left:auto;margin-right:auto;margin-bottom:10px;}\r\n"
+L"th{background:#bbd;padding:2px;}\r\n"
+L"td{padding:2px;border-bottom:1px dotted #bbd;}\r\n"
 L"</style>\r\n"
 L"<script type=\"text/javascript\">\r\n"
 L"function lz(n) { return (n < 10) ? '0' + n : n; }\r\n"
@@ -44,42 +46,44 @@ L"	var total = document.getElementById(\"total\").innerHTML;\r\n"
 L"	var state = document.getElementById(\"state\").innerHTML;\r\n"
 L"	var tmp = new Array();\r\n"
 L"	tmp = now.split(':');\r\n"
-L"	var m = parseInt(tmp[0],10);\r\n"
-L"	var s = parseInt(tmp[1],10);\r\n"
+L"	var h = parseInt(tmp[0],10);\r\n"
+L"	var m = parseInt(tmp[1],10);\r\n"
+L"	var s = parseInt(tmp[2],10);\r\n"
 L"	tmp = total.split(':');\r\n"
-L"	var tm = parseInt(tmp[0],10);\r\n"
-L"	var ts = parseInt(tmp[1],10);\r\n"
-L"	if (++s > 59) { s = 0; m++; }\r\n"
-L"	document.getElementById(\"now\").innerHTML = lz(m) + ':' + lz(s);\r\n"
-L"	if (m >= tm && s > ts) window.location=\"i.html\";\r\n"
-L"	else if (state == 'Playing') setTimeout('newtime();', 1000);\r\n"
+L"	var th = parseInt(tmp[0],10);\r\n"
+L"	var tm = parseInt(tmp[1],10);\r\n"
+L"	var ts = parseInt(tmp[2],10);\r\n"
+L"	if (++s > 59) { s = 0; if (++m > 59) { m = 0; h++; } }\r\n"
+L"	document.getElementById(\"now\").innerHTML =\r\n"
+L"		h + ':' + lz(m) + ':' + lz(s);\r\n"
+L"	if (state == 'Playing') {\r\n"
+L"		if (h >= th && m >= tm && s >= ts) window.location=\"/\";\r\n"
+L"		else setTimeout('newtime();', 1000);\r\n"
+L"	}\r\n"
 L"}\r\n"
 L"</script>\r\n"
 L"</head>\r\n"
 L"<body onload=\"newtime();\">\r\n"
-L"<form action=\"i.html\" method=\"get\">\r\n"
-L"Track: <span id=\"track\">%ls</span><br />\r\n"
-L"Album: <span id=\"album\">%ls</span><br />\r\n"
-L"Artist: <span id=\"artist\">%ls</span><br />\r\n"
-L"Comment: <span id=\"comment\">%ls</span><br />\r\n"
-L"<span id=\"state\">%s</span><br />\r\n"
-L"<p>\r\n"
-L"<span id=\"now\">%02ld:%02ld</span>\r\n"
-L"<input type=\"submit\" name=\"prev\" value=\"|<<\" />\r\n"
-L"<input type=\"submit\" name=\"rew\" value=\"<<\" />\r\n"
-L"<input type=\"submit\" name=\"pause\" value=\"||\" />\r\n"
-L"<input type=\"submit\" name=\"play\" value=\">\" />\r\n"
-L"<input type=\"submit\" name=\"ffwd\" value=\">>\" />\r\n"
-L"<input type=\"submit\" name=\"next\" value=\">>|\" />\r\n"
-L"<span id=\"total\">%ls</span>\r\n"
-L"</p>\r\n"
-L"<p>Volume<br />\r\n"
-L"<input type=\"submit\" name=\"10up\" value=\"+10\" /><br />\r\n"
-L"<input type=\"submit\" name=\"up\" value=\"+\" /><br />\r\n"
-L"<input type=\"submit\" name=\"mute\" value=\"0\" /> %ld %% (%ls)<br />\r\n"
-L"<input type=\"submit\" name=\"down\" value=\"-\" /><br />\r\n"
-L"<input type=\"submit\" name=\"10down\" value=\"-10\" /><br />\r\n"
-L"</p>\r\n"
+L"<form action=\"/\" method=\"post\">\r\n<table width=\"100%%\">\r\n"
+L"<tr><td>Track</td><td id=\"track\" colspan=7>%ls</td><td>Vol</td></tr>\r\n"
+L"<tr><td>Album</td><td id=\"album\" colspan=7>%ls</td><td>\r\n"
+L"<input type=\"submit\" name=\"10up\" value=\"+10\" /></td></tr>\r\n"
+L"<tr><td>Artist</td><td id=\"artist\" colspan=7>%ls</td><td>\r\n"
+L"<input type=\"submit\" name=\"up\" value=\"+\" /></td></tr>\r\n"
+L"<tr><td>Comment</td><td id=\"comment\" colspan=7>%ls</td><td>\r\n"
+L"<input type=\"submit\" name=\"mute\" value=\"0\" /> %ld&nbsp;%%</td>\r\n"
+L"</tr><tr><td id=\"state\" colspan=8>%ls</td><td>\r\n"
+L"<input type=\"submit\" name=\"down\" value=\"-\" /></td></tr>\r\n"
+L"<tr><td id=\"now\">%ld:%02ld:%02ld</td>\r\n"
+L"<td><input type=\"submit\" name=\"prev\" value=\"|<<\" /></td>\r\n"
+L"<td><input type=\"submit\" name=\"rew\" value=\"<<\" /></td>\r\n"
+L"<td><input type=\"submit\" name=\"pause\" value=\"||\" /></td>\r\n"
+L"<td><input type=\"submit\" name=\"play\" value=\">\" /></td>\r\n"
+L"<td><input type=\"submit\" name=\"ffwd\" value=\">>\" /></td>\r\n"
+L"<td><input type=\"submit\" name=\"next\" value=\">>|\" /></td>\r\n"
+L"<td id=\"total\">%ld:%02ld:%02ld</td><td>\r\n"
+L"<input type=\"submit\" name=\"10down\" value=\"-10\" /></td></tr>\r\n"
+L"</table>\r\n"
 L"</form></body></html>\r\n";
 
 static wchar_t htmlbuf[8192];	// storage for above after wsprintfW...
@@ -124,57 +128,79 @@ std::string get_iTunes(char *req, int reqlen)
   IITTrack *iITrack = 0;
   ITPlayerState iIPlayerState;
   wstring track = L"", album = L"", url = L"", artist = L"";
-  wstring comment = L"", total = L"00:00", state, version = L"";
+  wstring comment = L"", state, version = L"";
   BSTR bstr = 0;
-  long position, volume;
-  VARIANT_BOOL isMuted;
+  long position, duration, volume;
   string strRet;
+  char *postdata = strstr(req, "\r\n\r\n");
 
-  req[reqlen] = 0;	// prevent walking into neverneverland
+  if (!postdata) {
+    postdata = req + reqlen;
+  }
+  // FIXME: do real http header processing to handle multiple files
   // handle any requests before updating state
-  if (strstr(req, "prev"))
+  if (strstr(postdata, "prev"))
     iITunes->BackTrack();
-  if (strstr(req, "next"))
+  if (strstr(postdata, "next"))
     iITunes->NextTrack();
-  if (strstr(req, "ffwd")) {
+  if (strstr(postdata, "ffwd")) {
     iITunes->get_PlayerState(&iIPlayerState);
     if (iIPlayerState == ITPlayerStatePlaying)
       iITunes->FastForward();
     else
       iITunes->Resume();
   }
-  if (strstr(req, "rew")) {
+  if (strstr(postdata, "rew")) {
     iITunes->get_PlayerState(&iIPlayerState);
     if (iIPlayerState == ITPlayerStatePlaying)
       iITunes->Rewind();
     else
       iITunes->Resume();
   }
-  if (strstr(req, "play"))
-    iITunes->Play();
-  if (strstr(req, "pause"))
-    iITunes->Pause();
-  if (strstr(req, "10up")) {
-    iITunes->get_SoundVolume(&volume);
-    iITunes->put_SoundVolume(volume + 10);
-  } else if (strstr(req, "up")) {
-    iITunes->get_SoundVolume(&volume);
-    iITunes->put_SoundVolume(volume + 1);
+  if (strstr(postdata, "play")) {
+    iITunes->get_PlayerState(&iIPlayerState);
+    if (iIPlayerState == ITPlayerStateStopped)
+      iITunes->Play();
+    else
+      iITunes->Resume();
   }
-  if (strstr(req, "10down")) {
-    iITunes->get_SoundVolume(&volume);
-    if (volume < 10)
-      volume = 10;
-    iITunes->put_SoundVolume(volume - 10);
-  } else if (strstr(req, "down")) {
-    iITunes->get_SoundVolume(&volume);
-    if (volume < 1)
-      volume = 1;
-    iITunes->put_SoundVolume(volume - 1);
+  if (strstr(postdata, "pause")) {
+    iITunes->get_PlayerState(&iIPlayerState);
+    if (iIPlayerState == ITPlayerStateStopped)
+      iITunes->Play();
+    else
+      iITunes->Pause();
   }
-  if (strstr(req, "mute")) {
-    iITunes->get_Mute(&isMuted);
-    iITunes->put_Mute(!isMuted);
+  if (strstr(postdata, "10up")) {
+    iITunes->get_SoundVolume(&volume);
+    volume += 10;
+    iITunes->put_SoundVolume(volume);
+  } else if (strstr(postdata, "up")) {
+    iITunes->get_SoundVolume(&volume);
+    volume += 2;
+    iITunes->put_SoundVolume(volume);
+  }
+  if (strstr(postdata, "10down")) {
+    iITunes->get_SoundVolume(&volume);
+    volume -= 10;
+    if (volume < 0)
+      volume = 0;
+    iITunes->put_SoundVolume(volume);
+  } else if (strstr(postdata, "down")) {
+    iITunes->get_SoundVolume(&volume);
+    volume -= 2;
+    if (volume < 0)
+      volume = 0;
+    iITunes->put_SoundVolume(volume);
+  }
+  if (strstr(postdata, "mute")) {
+    static long oldvol = 13;
+    iITunes->get_SoundVolume(&volume);
+    if (volume)
+      iITunes->put_SoundVolume(0);
+    else
+      iITunes->put_SoundVolume(oldvol);
+    oldvol = volume;
   }
 
   // update state, may be affected by above requests...
@@ -183,7 +209,6 @@ std::string get_iTunes(char *req, int reqlen)
   iITunes->get_PlayerState(&iIPlayerState);
   iITunes->get_PlayerPosition(&position);
   iITunes->get_SoundVolume(&volume);
-  iITunes->get_Mute(&isMuted);
   iITunes->get_Version((BSTR *)&bstr);
   if (bstr)
     version = bstr;
@@ -205,10 +230,7 @@ std::string get_iTunes(char *req, int reqlen)
     iITrack->get_Comment((BSTR *)&bstr);
     if (bstr)
       comment = bstr;
-    bstr = 0;
-    iITrack->get_Time((BSTR *)&bstr);
-    if (bstr)
-      total = bstr;
+    iITrack->get_Duration(&duration);
   }
 
   switch (iIPlayerState) {
@@ -233,10 +255,10 @@ std::string get_iTunes(char *req, int reqlen)
 
   // Convert the result from wchar_t to utf-8 string
   StringCbPrintfW(htmlbuf, 8191, htmlfmt, version.c_str(), track.c_str(),
-		  album.c_str(), artist.c_str(), comment.c_str(),
-		  state.c_str(), position / 60, position % 60,
-		  total.c_str(), volume, isMuted ? L"Muted" :
-		  L"Unmuted");
+		  album.c_str(), artist.c_str(), comment.c_str(), volume,
+		  state.c_str(), position / 3600, (position / 60) % 60,
+		  position % 60, duration / 3600, (duration / 60) % 60,
+		  duration % 60);
   size_t len = wcslen(htmlbuf);
   // max 8192 bytes in return message...
   char convbuf[8192];
