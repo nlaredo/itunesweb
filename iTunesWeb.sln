@@ -3,6 +3,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iTunesWeb", "iTunesWeb.vcpr
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "iTunesWebInstaller", "iTunesWebInstaller.vdproj", "{F4CFCBA5-1548-4050-9D16-BDF506A75D34}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
@@ -15,6 +19,8 @@ Global
 		{8907F5D5-79F1-4C6C-9E7B-C4106B861938}.Debug.Build.0 = Debug|Win32
 		{8907F5D5-79F1-4C6C-9E7B-C4106B861938}.Release.ActiveCfg = Release|Win32
 		{8907F5D5-79F1-4C6C-9E7B-C4106B861938}.Release.Build.0 = Release|Win32
+		{F4CFCBA5-1548-4050-9D16-BDF506A75D34}.Debug.ActiveCfg = Debug
+		{F4CFCBA5-1548-4050-9D16-BDF506A75D34}.Release.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection
