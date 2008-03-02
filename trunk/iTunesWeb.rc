@@ -69,6 +69,8 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
+            VALUE "Comments", "http://code.google.com/p/itunesweb"
+            VALUE "CompanyName", "Nathan Laredo"
             VALUE "FileDescription", "iTunesWeb Application"
             VALUE "FileVersion", "1, 0, 0, 2"
             VALUE "InternalName", "iTunesWeb"

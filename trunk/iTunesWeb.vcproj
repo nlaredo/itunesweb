@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="iTunesWeb"
+	ProjectGUID="{9A6B64F2-EA7F-429E-97C8-33ACC5856516}"
 	SccProjectName=""
 	SccLocalPath="">
 	<Platforms>
@@ -210,6 +211,10 @@
 				RelativePath=".\icon1.ico">
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\COPYING"
+			DeploymentContent="TRUE">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
