@@ -16,6 +16,7 @@
 //  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //////////////////////////////////////////////////////////////////////////////
 
+#include <iostream>
 #include <string>
 #include <winsock2.h>
 #include <time.h>
@@ -54,6 +55,7 @@ void RemoveConnect(int s)
 {
   int i;
 
+  cout << "Close " << inet_ntoa(fromhost[s]) << endl;
   shutdown(sockfd[s], 2);
   closesocket(sockfd[s]);
   i = (--sockfdmax) - s;
@@ -84,6 +86,7 @@ SOCKET AcceptConnect(void)
   memcpy(&fromhost[sockfdmax], (struct in_addr *) &sa.sin_addr,
 	 sizeof(*fromhost));
   //fcntl(s, F_SETFL, O_NDELAY);
+  cout << "Open " << inet_ntoa(fromhost[sockfdmax]) << endl;
   return s;
 
 }
@@ -158,8 +161,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	      sockfdmax++;
 	    }
 	  } else {
-	    char buf[32];
-	    int len;
 	    if (!ReadInput(i)) {
 	      RemoveConnect(i);
 	      break;	// setup readfs again, socket list is now changed...
@@ -189,7 +190,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	      savechar = tmp[4];
 	      tmp[4] = '\0';	// nul terminate request
 	    }
-	    len = strlen(reqbuf[i]);
+cout << inet_ntoa(fromhost[i]) << ": " << reqbuf[i] << endl;
+  	    int keepalive = (strstr(reqbuf[i], " HTTP/1.0") == NULL) &&
+			    (strstr(reqbuf[i], "Connection: close") == NULL);
+	    int len = strlen(reqbuf[i]);
 	    // send completed request to itunes handler
 	    itd = get_iTunes(reqbuf[i], len);
 	    // restore character overwritten with nul
@@ -200,19 +204,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	    // setup accounting for future (keep-alive) request
 	    reqlen[i] = reqlen[i] - len;
 	    reqbuf[i][reqlen[i]] = '\0';
+	    char buf[32];
 	    sprintf(buf, "%d", itd.length());
 	    _time64(&ltime);
 	    pkt = "HTTP/1.1 200 OK\r\nDate: ";
 	    pkt += _ctime64(&ltime);
-	    pkt += "Server: iTunesWeb/1.0.0.2 (Win32) (Windows XP)\r\n";
+	    pkt += "Server: iTunesWeb/1.0.0.3 (Win32) (Windows XP)\r\n";
 	    pkt += "Last-Modified: ";
 	    pkt += _ctime64(&ltime);
 	    pkt += "Content-Length: ";
 	    pkt += buf;
-	    pkt += "\r\nConnection: keep-alive\r\n";
+	    if (keepalive) {
+	      pkt += "\r\nKeep-Alive: timeout=900, max=0";
+	      pkt += "\r\nConnection: Keep-Alive\r\n";
+	    } else {
+	      pkt += "\r\nConnection: close\r\n";
+	    }
 	    pkt += "Content-Type: text/html; charset=UTF-8\r\n\r\n";
 	    pkt += itd;
 	    send(sockfd[i], pkt.c_str(), pkt.length(), 0);
+	    if (!keepalive) {
+	      RemoveConnect(i);
+	      break;	// setup readfs again, socket list is now changed...
+	    }
 	  }
 	}
       }
