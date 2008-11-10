@@ -89,7 +89,8 @@ L"<input type=\"radio\" onchange=\"this.form.submit();\" name=\"ord\" value="
 L"\"shuf\" %ls>Shuffle</td>\r\n<td colspan=2><input type=\"radio\" "
 L"name=\"ord\" value=\"seq\" onchange=\"this.form.submit();\" "
 L"%ls>Sequential</td>\r\n<td><input type=\"submit\" name=\"10down\" "
-L"value=\"-10\" /></td></tr>\r\n</table></form>\r\n<p>"
+L"value=\"-10\" /></td></tr>\r\n<tr><td>Filename</td>\r\n"
+L"<td colspan=8 id=\"filename\">%ls</td></tr></table></form>\r\n<p>"
 L"<a href=\"/\">Refresh</a></p>\r\n<table width=\"100%%\" rules=groups>\r\n"
 L"<tr><th>#</th><th>Name</th><th>Artist</th><th>Time</th>\r\n"
 L"<th>Album</th><th>Genre</th>\r\n"
@@ -146,6 +147,8 @@ std::string get_iTunes(char *req, int reqlen)
   IITPlaylist *iPlaylist = NULL;
   IITTrackCollection *iTracks = NULL;
   VARIANT_BOOL do_shuffle;
+  IITFileOrCDTrack *iIFile;
+  IITURLTrack *iIURL;
   wstring version = L"", state;
   BSTR bstr = 0;
   long position, duration, volume, play_index = 0;
@@ -274,7 +277,7 @@ std::string get_iTunes(char *req, int reqlen)
   }
   for (long index = 0; iTracks && index < 7; index++) {
     wstring track = L"", album = L"", url = L"", artist = L"", comment = L"";
-    wstring genre = L"";
+    wstring genre = L"", filename = L"";
     long playcount = 0;
     DATE lastplayed = 0;
     iITrack = NULL;
@@ -300,6 +303,23 @@ std::string get_iTunes(char *req, int reqlen)
       iITrack->get_Genre((BSTR *)&bstr);
       if (bstr)
 	genre = bstr;
+      iIFile = NULL;
+      iITrack->QueryInterface(IID_IITFileOrCDTrack, (void**)&iIFile);
+      if (iIFile) {
+	iIFile->get_Location((BSTR *)&bstr);
+	iIFile->Release();
+	if (bstr)
+	  filename = bstr;
+      }
+      iIURL = NULL;
+      iITrack->QueryInterface(IID_IITURLTrack, (void**)&iIURL);
+      if (iIURL) {
+	iIURL->get_URL((BSTR *)&bstr);
+	iIURL->Release();
+	if (bstr)
+	  filename = bstr;
+      }
+
       iITrack->get_Duration(&duration);
       iITrack->get_PlayedCount(&playcount);
       iITrack->get_PlayedDate(&lastplayed);
@@ -312,7 +332,7 @@ std::string get_iTunes(char *req, int reqlen)
 		      (duration / 60) % 60, duration % 60, track.c_str(),
 		      album.c_str(), artist.c_str(), volume, comment.c_str(),
 		      state.c_str(), do_shuffle ? L"checked" : L"", do_shuffle ?
-		      L"": L"checked");
+		      L"": L"checked", filename.c_str());
     }
     size_t len = wcslen(htmlbuf);
     __time64_t when = (__time64_t)((double)lastplayed > 25569 ?

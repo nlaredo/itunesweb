@@ -208,7 +208,13 @@
 			Name="Resource Files"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 			<File
-				RelativePath=".\icon1.ico">
+				RelativePath=".\iTunesWeb16.ico">
+			</File>
+			<File
+				RelativePath=".\iTunesWeb32.ico">
+			</File>
+			<File
+				RelativePath=".\iTunesWeb48.ico">
 			</File>
 		</Filter>
 		<File

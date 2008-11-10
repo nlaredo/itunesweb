@@ -16,10 +16,13 @@
 //  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //////////////////////////////////////////////////////////////////////////////
 
+#define _WIN32_IE 0x0600
+
 #include <iostream>
 #include <string>
 #include <winsock2.h>
 #include <time.h>
+#include "resource.h"
 
 using namespace std;
 
@@ -128,6 +131,79 @@ void init_server(void)
   sockfdmax++;
 }
 
+void cleanup_exit(int status)
+{
+  kill_iTunes();
+  shutdown(sockfd[0], 2);
+  closesocket(sockfd[0]);
+  WSACleanup();
+  exit(status);
+}
+
+static NOTIFYICONDATA nid;
+//////////////////////////////////////////////////////////////////////////////
+INT_PTR CALLBACK DlgProc(HWND hWnd, UINT message,
+			 WPARAM wParam, LPARAM lParam)
+{
+  switch(message) {
+    // YOU WERE HERE
+    case MY_TRAY_ICON_MESSAGE:
+      switch(lParam) {
+	case WM_LBUTTONDBLCLK:
+	  ShowWindow(hWnd, SW_RESTORE);
+	  return TRUE;
+	case WM_RBUTTONDOWN:
+	case WM_CONTEXTMENU:
+	  //ShowContextMenu(hWnd);
+	  ShowWindow(hWnd, SW_HIDE);
+	  return TRUE;
+      }
+      break;
+    case WM_COMMAND:
+      switch(wParam) {
+	case IDC_ALLOW:
+	  ShowWindow(hWnd, SW_HIDE);
+	  return TRUE;
+	case IDC_DENY:
+	  ShowWindow(hWnd, SW_HIDE);
+	  return TRUE;
+      }
+      break;
+    case WM_CLOSE:
+      ShowWindow(hWnd, SW_HIDE);
+      return TRUE;
+
+  }
+  return FALSE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+DWORD WINAPI GuiThreadProc(LPVOID lpParameter)
+{
+  HINSTANCE hInstance = *(HINSTANCE *)lpParameter;
+  HWND hWnd;
+
+  hWnd = CreateDialog(hInstance, MAKEINTRESOURCE(IDM_CONTROL), NULL,
+    (DLGPROC)DlgProc);
+
+  ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
+  nid.uID = IDI_SHELLNOTIFY;
+  nid.uFlags = NIF_ICON|NIF_MESSAGE|NIF_TIP;
+  nid.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_ICON2),
+  	IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+	GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+  nid.hWnd = GetDesktopWindow();
+  nid.uCallbackMessage = MY_TRAY_ICON_MESSAGE;
+  //nid.szTip; YOU WERE ALSO HERE
+  Shell_NotifyIcon(NIM_ADD, &nid);
+
+
+  MessageBox(NULL, TEXT("Dismiss this dialog box to exit..."),
+	     TEXT("iTunesWeb Control"), MB_OK); 
+  Shell_NotifyIcon(NIM_DELETE,&nid);
+  cleanup_exit(0);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
@@ -140,6 +216,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   init_server();
   init_iTunes();
 
+  if (CreateThread(NULL, 0, GuiThreadProc, &hInstance, 0, NULL) == NULL) {
+    MessageBox(NULL, TEXT("CreateThread Failed, Exiting..."),
+	       TEXT("CreateThread Error"), MB_OK); 
+    cleanup_exit(1);
+  }
   while (ok) {
     FD_ZERO(&readfs);
     for (i = 0; i < sockfdmax; i++) {
@@ -235,11 +316,8 @@ cout << inet_ntoa(fromhost[i]) << ": " << reqbuf[i] << endl;
       ok = 0;
     }
   }
-  kill_iTunes();
-  shutdown(sockfd[0], 2);
-  closesocket(sockfd[0]);
-  WSACleanup();
-  return 0;
+  cleanup_exit(0);
+  return 1;	// never reached
 }
 
 //////////////////////////////////////////////////////////////////////////////
