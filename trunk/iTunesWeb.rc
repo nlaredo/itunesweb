@@ -53,8 +53,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,4
- PRODUCTVERSION 1,0,0,4
+ FILEVERSION 1,0,0,5
+ PRODUCTVERSION 1,0,0,5
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -72,12 +72,12 @@ BEGIN
             VALUE "Comments", "http://code.google.com/p/itunesweb"
             VALUE "CompanyName", "Nathan Laredo"
             VALUE "FileDescription", "iTunesWeb Application"
-            VALUE "FileVersion", "1, 0, 0, 4"
+            VALUE "FileVersion", "1, 0, 0, 5"
             VALUE "InternalName", "iTunesWeb"
             VALUE "LegalCopyright", "Copyright (C) 2008 Nathan Laredo"
             VALUE "OriginalFilename", "iTunesWeb.exe"
             VALUE "ProductName", " iTunesWeb"
-            VALUE "ProductVersion", "1, 0, 0, 4"
+            VALUE "ProductVersion", "1, 0, 0, 5"
         END
     END
     BLOCK "VarFileInfo"
@@ -94,7 +94,68 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON                    "icon1.ico"
+IDI_ICON1               ICON                    "iTunesWeb32.ico"
+IDI_ICON2               ICON                    "iTunesWeb16.ico"
+IDI_ICON3               ICON                    "iTunesWeb48.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU 
+BEGIN
+    POPUP "i&TunesWeb"
+    BEGIN
+        MENUITEM "&About",                      ID_ITUNESWEB_ABOUT
+        MENUITEM SEPARATOR
+        MENUITEM "&History",                    ID_ITUNESWEB_HISTORY
+        MENUITEM "&Status",                     ID_ITUNESWEB_STATUS
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_ITUNESWEB_EXIT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDM_CONTROL DIALOGEX 0, 0, 236, 289
+STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | DS_FIXEDSYS | WS_POPUP | 
+    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_WINDOWEDGE | WS_EX_APPWINDOW
+CAPTION "iTunesWeb Control"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,222,254,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
+    CONTROL         "",IDC_IPADDRESS1,"SysIPAddress32",WS_TABSTOP,7,267,125,
+                    14
+    PUSHBUTTON      "Deny",IDC_DENY,137,268,44,14
+    DEFPUSHBUTTON   "Allow",IDC_ALLOW,185,268,44,14,WS_GROUP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDM_CONTROL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 229
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 282
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////
 
