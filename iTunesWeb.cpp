@@ -24,6 +24,15 @@
 #include <time.h>
 #include "resource.h"
 
+// TODO: split gui bits out into another file...
+#include <commctrl.h>
+#include <windowsx.h>
+#include <shellapi.h>
+static TCHAR AppClassName[MAX_RESOURCESTRING + 1];
+static TCHAR AppTitle[MAX_RESOURCESTRING + 1];
+static HWND hwndMain = NULL;
+static NOTIFYICONDATA nid;
+
 using namespace std;
 
 // listen for incoming connections on this port
@@ -140,68 +149,199 @@ void cleanup_exit(int status)
   exit(status);
 }
 
-static NOTIFYICONDATA nid;
 //////////////////////////////////////////////////////////////////////////////
-INT_PTR CALLBACK DlgProc(HWND hWnd, UINT message,
+static void DlgOnCommand(HWND hwnd, int id, HWND hwndCtl, UINT cNotify)
+{
+  switch (id) {
+    case IDOK:
+    case IDCANCEL:
+      EndDialog(hwnd, TRUE);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+INT_PTR CALLBACK DlgProc(HWND hwnd, UINT message,
 			 WPARAM wParam, LPARAM lParam)
 {
   switch(message) {
-    // YOU WERE HERE
-    case MY_TRAY_ICON_MESSAGE:
-      switch(lParam) {
-	case WM_LBUTTONDBLCLK:
-	  ShowWindow(hWnd, SW_RESTORE);
-	  return TRUE;
-	case WM_RBUTTONDOWN:
-	case WM_CONTEXTMENU:
-	  //ShowContextMenu(hWnd);
-	  ShowWindow(hWnd, SW_HIDE);
-	  return TRUE;
-      }
-      break;
-    case WM_COMMAND:
-      switch(wParam) {
-	case IDC_ALLOW:
-	  ShowWindow(hWnd, SW_HIDE);
-	  return TRUE;
-	case IDC_DENY:
-	  ShowWindow(hWnd, SW_HIDE);
-	  return TRUE;
-      }
-      break;
-    case WM_CLOSE:
-      ShowWindow(hWnd, SW_HIDE);
+    case WM_INITDIALOG:
       return TRUE;
-
+    case WM_COMMAND:
+      return HANDLE_WM_COMMAND(hwnd, wParam, lParam, DlgOnCommand);
   }
   return FALSE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
+static void del_notify_icon(void)
+{
+  ShowWindow(hwndMain, SW_SHOWNORMAL);
+  if (nid.uID != IDI_SHELLNOTIFY) {
+    return;  // already created;
+  }
+  Shell_NotifyIcon(NIM_DELETE, &nid);
+  nid.uID = 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+static void add_notify_icon(void)
+{
+  ShowWindow(hwndMain, SW_HIDE);
+  if (nid.uID == IDI_SHELLNOTIFY) {
+    return;  // already created;
+  }
+  nid.uID = IDI_SHELLNOTIFY;
+  Shell_NotifyIcon(NIM_ADD, &nid);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+static void mainframeOnCommand(HWND hwnd, int id, HWND hwndCtl, UINT cNotify)
+{
+  switch (id) {
+    case ID_ITUNESWEB_EXIT:
+      del_notify_icon();
+      PostQuitMessage(0);
+      return;
+    case ID_ITUNESWEB_STATUS:
+      ShellExecute(NULL, "open", "http://localhost:8080", NULL, NULL,
+     		   SW_SHOWNORMAL);
+      return;
+    case ID_ITUNESWEB_HIDE:
+      add_notify_icon();
+      return;
+    case ID_ITUNESWEB_ABOUT:
+      DialogBox(GetWindowInstance(hwndMain), MAKEINTRESOURCE(DLG_ABOUT),
+     		hwndMain, (DLGPROC)DlgProc);
+      return;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+static void mainframeOnDestroy(HWND hwnd)
+{
+  PostQuitMessage(0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+LRESULT CALLBACK mainframeWndProc(HWND hwnd, UINT message, WPARAM wParam,
+                                  LPARAM lParam)
+{
+  if (wParam == IDI_SHELLNOTIFY) {
+    switch (lParam) {
+      case WM_LBUTTONDBLCLK:
+	del_notify_icon();
+	return 0;
+      case WM_CONTEXTMENU:
+      case WM_RBUTTONDOWN: {
+	HMENU hmenu = GetSubMenu(GetMenu(hwndMain), 0);
+	POINT pt;
+	GetCursorPos(&pt);
+	SetForegroundWindow(hwnd);  // so clicks outside popup are handled
+        TrackPopupMenuEx(hmenu, TPM_RIGHTBUTTON | TPM_BOTTOMALIGN |
+			 TPM_RIGHTALIGN, pt.x, pt.y, hwndMain, NULL);
+        return 0;
+      }
+    }
+  }
+  switch (message) {
+    HANDLE_MSG(hwnd, WM_COMMAND, mainframeOnCommand);
+    HANDLE_MSG(hwnd, WM_DESTROY, mainframeOnDestroy);
+    case WM_CLOSE:
+      add_notify_icon();
+      return 0;
+  }
+  return DefWindowProc(hwnd, message, wParam, lParam);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+static ATOM register_window_class(HINSTANCE hinst)
+{
+  WNDCLASSEX wcex;
+
+  wcex.cbSize = sizeof(WNDCLASSEX);
+  wcex.style = CS_HREDRAW | CS_VREDRAW;
+  wcex.lpfnWndProc = mainframeWndProc;
+  wcex.cbClsExtra = 0;
+  wcex.cbWndExtra = 0;
+  wcex.hInstance = hinst;
+  wcex.hIcon = LoadIcon(hinst, MAKEINTRESOURCE(IDI_ICON1));
+  wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+  wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  wcex.lpszMenuName = MAKEINTRESOURCE(IDR_MAINFRAME);
+  wcex.lpszClassName = AppClassName;
+  wcex.hIconSm = LoadIcon(hinst, MAKEINTRESOURCE(IDI_ICON2));
+  return RegisterClassEx(&wcex);
+}
+
+//////////////////////////////////////////////////////////////////////////////
 DWORD WINAPI GuiThreadProc(LPVOID lpParameter)
 {
-  HINSTANCE hInstance = *(HINSTANCE *)lpParameter;
-  HWND hWnd;
+  HINSTANCE hinst = *(HINSTANCE *)lpParameter;
+  HACCEL haccel;
+  HWND hwndt;	// tmp for accelerator rewrite
+  MSG msg;
 
-  hWnd = CreateDialog(hInstance, MAKEINTRESOURCE(IDM_CONTROL), NULL,
-    (DLGPROC)DlgProc);
+  // create main application window
+  hwndMain = CreateWindowEx(0, AppClassName, AppTitle, WS_OVERLAPPEDWINDOW,
+	CW_USEDEFAULT, CW_USEDEFAULT, 224, 128, NULL, NULL, hinst, NULL);
+  if (!hwndMain) {
+    cleanup_exit(1);  // failed to create main window
+  }
 
+  ShowWindow(hwndMain, SW_SHOW);
+  haccel = LoadAccelerators(hinst, MAKEINTRESOURCE(IDR_MAINFRAME));
+
+  // prepare notify icon data
   ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
-  nid.uID = IDI_SHELLNOTIFY;
-  nid.uFlags = NIF_ICON|NIF_MESSAGE|NIF_TIP;
-  nid.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_ICON2),
-  	IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-	GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
-  nid.hWnd = GetDesktopWindow();
-  nid.uCallbackMessage = MY_TRAY_ICON_MESSAGE;
-  //nid.szTip; YOU WERE ALSO HERE
-  Shell_NotifyIcon(NIM_ADD, &nid);
+  nid.cbSize = NOTIFYICONDATA_V2_SIZE;
+  nid.uFlags = NIF_ICON|NIF_MESSAGE|NIF_TIP|NIF_INFO;
+  nid.hIcon = LoadIcon(hinst, MAKEINTRESOURCE(IDI_ICON2));
+  nid.hWnd = hwndMain;
+  nid.uCallbackMessage = IDI_SHELLNOTIFY;
+  LoadString(hinst, IDS_INIT_ICON_TEXT, nid.szTip, sizeof(nid.szTip));
+  LoadString(hinst, IDS_INIT_ICON_TEXT, nid.szInfo, sizeof(nid.szInfo));
+  nid.uTimeout = 12000;  // timeout in milliseconds, 10000 - 30000
+  LoadString(hinst, IDS_APP_TITLE, nid.szInfoTitle, sizeof(nid.szInfoTitle));
+  nid.dwInfoFlags = NIIF_USER;
 
-
-  MessageBox(NULL, TEXT("Dismiss this dialog box to exit..."),
-	     TEXT("iTunesWeb Control"), MB_OK); 
-  Shell_NotifyIcon(NIM_DELETE,&nid);
+  // main gui event loop
+  while (GetMessage(&msg, NULL, 0, 0)) {
+    hwndt = msg.hwnd;
+    if (!TranslateAccelerator(hwndt, haccel, &msg)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+  }
+  del_notify_icon();
   cleanup_exit(0);
+  return 0;  // never reached
+}
+
+//////////////////////////////////////////////////////////////////////////////
+static BOOL init_instance(HINSTANCE hinst)
+{
+  HWND hwnd;
+
+  LoadString(hinst, IDR_MAINFRAME, AppClassName, sizeof(AppClassName));
+  LoadString(hinst, IDS_APP_TITLE, AppTitle, sizeof(AppTitle));
+  hwnd = FindWindow(AppClassName, NULL);
+  // if app already running (class exists), show existing window, exit this
+  if (hwnd) {
+    if (IsIconic(hwnd)) {
+      ShowWindow(hwnd, SW_RESTORE);
+    }
+    if (!IsWindowVisible(hwnd)) {
+      // fake a double click of the shell notify icon
+      SendMessage(hwnd, WM_LBUTTONDBLCLK, IDI_SHELLNOTIFY, WM_LBUTTONDBLCLK);
+    }
+    SetForegroundWindow(hwnd);
+    return FALSE;  // force exit of new invocation of app
+  }
+  if (!register_window_class(hinst)) {
+    return FALSE;  // failed to register app window class
+  }
+  //InitCommonControls();   // make common controls available
+  return TRUE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -213,6 +353,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
   string itd, pkt;
   __time64_t ltime;
 
+  if (!init_instance(hInstance)) {
+    return FALSE;
+  }
   init_server();
   init_iTunes();
 

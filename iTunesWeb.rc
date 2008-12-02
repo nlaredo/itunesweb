@@ -1,68 +1,27 @@
-// Microsoft Visual C++ generated resource script.
-//
 #include "resource.h"
+#include "winresrc.h"
+#include "winver.h"
 
-#define APSTUDIO_READONLY_SYMBOLS
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 2 resource.
-//
-#include "afxres.h"
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 
-/////////////////////////////////////////////////////////////////////////////
-#undef APSTUDIO_READONLY_SYMBOLS
-
-/////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
-LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
-#endif //_WIN32
-
-#ifdef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE 
-BEGIN
-    "resource.h\0"
-END
-
-2 TEXTINCLUDE 
-BEGIN
-    "#include ""afxres.h""\r\n"
-    "\0"
-END
-
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-
-#endif    // APSTUDIO_INVOKED
-
-
+#define NUMERIC_VERSION 1,0,0,6
+#define STRING_VERSION "1.0.0.6"
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
 //
 
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,5
- PRODUCTVERSION 1,0,0,5
- FILEFLAGSMASK 0x17L
+IDR_VERSION_INFO VERSIONINFO
+ FILEVERSION	NUMERIC_VERSION
+ PRODUCTVERSION	NUMERIC_VERSION
+ FILEFLAGSMASK	0x17L //VS_FF_DEBUG | VS_FF_PRERELEASE
 #ifdef _DEBUG
- FILEFLAGS 0x1L
+ FILEFLAGS	1 //VS_FF_DEBUG | VS_FF_PRERELEASE
 #else
- FILEFLAGS 0x0L
+ FILEFLAGS	0 //VS_FF_RELEASE
 #endif
- FILEOS 0x4L
- FILETYPE 0x1L
+ FILEOS		VOS_NT_WINDOWS32
+ FILETYPE	VFT_APP
  FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
@@ -72,12 +31,12 @@ BEGIN
             VALUE "Comments", "http://code.google.com/p/itunesweb"
             VALUE "CompanyName", "Nathan Laredo"
             VALUE "FileDescription", "iTunesWeb Application"
-            VALUE "FileVersion", "1, 0, 0, 5"
+            VALUE "FileVersion", STRING_VERSION
             VALUE "InternalName", "iTunesWeb"
             VALUE "LegalCopyright", "Copyright (C) 2008 Nathan Laredo"
             VALUE "OriginalFilename", "iTunesWeb.exe"
-            VALUE "ProductName", " iTunesWeb"
-            VALUE "ProductVersion", "1, 0, 0, 5"
+            VALUE "ProductName", "Windows XP"
+            VALUE "ProductVersion", "5.10"
         END
     END
     BLOCK "VarFileInfo"
@@ -88,10 +47,19 @@ END
 
 
 /////////////////////////////////////////////////////////////////////////////
+//666 666 iTunesWeb.sig
+/////////////////////////////////////////////////////////////////////////////
+
+STRINGTABLE DISCARDABLE
+BEGIN
+	IDS_APP_TITLE "iTunesWeb"
+	IDR_MAINFRAME "iTunesWebClass"
+	IDS_INIT_ICON_TEXT  "iTunesWeb 1.0.0.6 is running..."
+END
+/////////////////////////////////////////////////////////////////////////////
 //
 // Icon
 //
-
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "iTunesWeb32.ico"
@@ -100,22 +68,51 @@ IDI_ICON3               ICON                    "iTunesWeb48.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// Accelerators
+//
+
+IDR_MAINFRAME ACCELERATORS
+BEGIN
+	"C",	ID_ITUNESWEB_EXIT,	VIRTKEY, CONTROL
+	"A",	ID_ITUNESWEB_ABOUT,	VIRTKEY, CONTROL
+	"F",	ID_ITUNESWEB_FIREWALL,	VIRTKEY, CONTROL
+	"S",	ID_ITUNESWEB_STATUS,	VIRTKEY, CONTROL
+	"H",	ID_ITUNESWEB_HIDE,	VIRTKEY, CONTROL
+END
+/////////////////////////////////////////////////////////////////////////////
+//
 // Menu
 //
 
-IDR_MENU1 MENU 
+IDR_MAINFRAME MENU DISCARDABLE
 BEGIN
     POPUP "i&TunesWeb"
     BEGIN
-        MENUITEM "&About",                      ID_ITUNESWEB_ABOUT
+        MENUITEM "&About\tCtrl+A",		ID_ITUNESWEB_ABOUT
         MENUITEM SEPARATOR
-        MENUITEM "&History",                    ID_ITUNESWEB_HISTORY
-        MENUITEM "&Status",                     ID_ITUNESWEB_STATUS
+        MENUITEM "&Firewall\tCtrl+F",		ID_ITUNESWEB_FIREWALL
+        MENUITEM "&Status\tCtrl+S",		ID_ITUNESWEB_STATUS
+        MENUITEM "&Hide\tCtrl+H",		ID_ITUNESWEB_HIDE
         MENUITEM SEPARATOR
-        MENUITEM "E&xit",                       ID_ITUNESWEB_EXIT
+        MENUITEM "E&xit\tCtrl+C",		ID_ITUNESWEB_EXIT
     END
 END
 
+DLG_ABOUT DIALOGEX 0, 0, 128, 128
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About iTunesWeb"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "&OK", IDOK, 44, 104, 40, 14
+    ICON IDI_ICON1, IDC_STATIC, 5, 5, 32, 32, SS_ICON
+    CTEXT  "iTunesWeb", IDC_STATIC, 32, 10, 96, 8
+    CTEXT  STRING_VERSION, IDC_STATIC, 32, 20, 96, 8
+    CTEXT  "Copyright \xA9 2008 Nathan Laredo", IDC_STATIC, 0, 40, 128, 8
+    CTEXT  "This program is free software; you", IDC_STATIC, 0, 60, 128, 8
+    CTEXT  "can redistribute it and/or modify it", IDC_STATIC, 0, 70, 128, 8
+    CTEXT  "under the terms of the GNU General", IDC_STATIC, 0, 80, 128, 8
+    CTEXT  "Public Licence version 2.", IDC_STATIC, 0, 90, 128, 8
+END
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -127,7 +124,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_NOIDLEMSG | DS_FIXEDSYS | WS_POPUP |
     WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_WINDOWEDGE | WS_EX_APPWINDOW
 CAPTION "iTunesWeb Control"
-FONT 8, "MS Shell Dlg", 0, 0, 0x0
+FONT 8, "MS Shell Dlg"
 BEGIN
     EDITTEXT        IDC_EDIT1,7,7,222,254,ES_MULTILINE | ES_AUTOVSCROLL | 
                     ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
@@ -136,38 +133,4 @@ BEGIN
     PUSHBUTTON      "Deny",IDC_DENY,137,268,44,14
     DEFPUSHBUTTON   "Allow",IDC_ALLOW,185,268,44,14,WS_GROUP
 END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
-BEGIN
-    IDM_CONTROL, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 229
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 282
-    END
-END
-#endif    // APSTUDIO_INVOKED
-
-#endif    // English (U.S.) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-
-#ifndef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 3 resource.
-//
-
-
-/////////////////////////////////////////////////////////////////////////////
-#endif    // not APSTUDIO_INVOKED
 
