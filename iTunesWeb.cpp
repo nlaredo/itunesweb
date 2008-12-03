@@ -203,8 +203,8 @@ static void mainframeOnCommand(HWND hwnd, int id, HWND hwndCtl, UINT cNotify)
       PostQuitMessage(0);
       return;
     case ID_ITUNESWEB_STATUS:
-      ShellExecute(NULL, "open", "http://localhost:8080", NULL, NULL,
-     		   SW_SHOWNORMAL);
+      ShellExecute(NULL, TEXT("open"), TEXT("http://localhost:8080"), NULL,
+     		   NULL, SW_SHOWNORMAL);
       return;
     case ID_ITUNESWEB_HIDE:
       add_notify_icon();

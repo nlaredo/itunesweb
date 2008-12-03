@@ -1,8 +1,9 @@
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iTunesWeb", "iTunesWeb.vcproj", "{9A6B64F2-EA7F-429E-97C8-33ACC5856516}"
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iTunesWeb", "iTunesWeb.vcproj", "{DAAA27E1-6A0D-4061-A1C7-78FAA9F4CE17}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "iTunesWebInstaller", "iTunesWebInstaller.vdproj", "{F4CFCBA5-1548-4050-9D16-BDF506A75D34}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "iTunesWebInstaller", "iTunesWebInstaller.vdproj", "{D1B5EED9-FE4C-4AA8-9C6D-FBAFF07170E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,10 +11,14 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9A6B64F2-EA7F-429E-97C8-33ACC5856516}.Debug|Win32.ActiveCfg = Debug|Win32
-		{9A6B64F2-EA7F-429E-97C8-33ACC5856516}.Release|Win32.ActiveCfg = Release|Win32
-		{F4CFCBA5-1548-4050-9D16-BDF506A75D34}.Debug|Win32.ActiveCfg = Debug
-		{F4CFCBA5-1548-4050-9D16-BDF506A75D34}.Release|Win32.ActiveCfg = Release
+		{DAAA27E1-6A0D-4061-A1C7-78FAA9F4CE17}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DAAA27E1-6A0D-4061-A1C7-78FAA9F4CE17}.Debug|Win32.Build.0 = Debug|Win32
+		{DAAA27E1-6A0D-4061-A1C7-78FAA9F4CE17}.Release|Win32.ActiveCfg = Release|Win32
+		{DAAA27E1-6A0D-4061-A1C7-78FAA9F4CE17}.Release|Win32.Build.0 = Release|Win32
+		{D1B5EED9-FE4C-4AA8-9C6D-FBAFF07170E1}.Debug|Win32.ActiveCfg = Release
+		{D1B5EED9-FE4C-4AA8-9C6D-FBAFF07170E1}.Debug|Win32.Build.0 = Release
+		{D1B5EED9-FE4C-4AA8-9C6D-FBAFF07170E1}.Release|Win32.ActiveCfg = Release
+		{D1B5EED9-FE4C-4AA8-9C6D-FBAFF07170E1}.Release|Win32.Build.0 = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
